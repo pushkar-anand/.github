@@ -64,6 +64,7 @@ jobs:
     if: ${{ inputs.run-lint }}
     permissions:
       contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -74,6 +75,10 @@ jobs:
           cache: true
 
       - name: staticcheck
-        run: |
-          TAGS="${{ inputs.build-tags }}"
-          go tool staticcheck ${TAGS:+-tags "$TAGS"} ./...
+        uses: reviewdog/action-staticcheck@e91d47e9aa9ad972ed705a6f531f3c0fb33f8a8e # v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          filter_mode: nofilter
+          fail_on_error: true
+          staticcheck_flags: ${{ inputs.build-tags && format('-tags {0}', inputs.build-tags) || '' }}
