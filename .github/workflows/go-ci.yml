@@ -15,6 +15,10 @@ on:
         description: "Run staticcheck lint job"
         type: boolean
         default: false
+      generate-command:
+        description: "Command to regenerate code (e.g. 'make generate'). Empty = skip."
+        type: string
+        default: ""
 
 jobs:
   ci:
@@ -33,6 +37,25 @@ jobs:
 
       - name: Verify dependencies
         run: go mod verify
+
+      - name: Check go.mod/go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Run generate
+        if: ${{ inputs.generate-command != '' }}
+        run: ${{ inputs.generate-command }}
+
+      - name: Ensure generated files are up to date
+        if: ${{ inputs.generate-command != '' }}
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Generated files are out of date. Run '${{ inputs.generate-command }}' and commit the result."
+            git status
+            git diff
+            exit 1
+          fi
 
       - name: Build
         run: |
