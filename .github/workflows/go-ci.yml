@@ -1,0 +1,79 @@
+name: Go CI
+
+on:
+  workflow_call:
+    inputs:
+      build-tags:
+        description: "Space-separated Go build tags (e.g. goolm)"
+        type: string
+        default: ""
+      go-version-file:
+        description: "Path to go.mod for Go version"
+        type: string
+        default: "go.mod"
+      run-lint:
+        description: "Run staticcheck lint job"
+        type: boolean
+        default: false
+
+jobs:
+  ci:
+    name: Build, Vet & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Build
+        run: |
+          TAGS="${{ inputs.build-tags }}"
+          go build ${TAGS:+-tags "$TAGS"} ./...
+
+      - name: Vet
+        run: |
+          TAGS="${{ inputs.build-tags }}"
+          go vet ${TAGS:+-tags "$TAGS"} ./...
+
+      - name: Format check
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Test
+        run: |
+          TAGS="${{ inputs.build-tags }}"
+          go test ${TAGS:+-tags "$TAGS"} -race -count=1 ./...
+
+  lint:
+    name: Lint (staticcheck)
+    runs-on: ubuntu-latest
+    if: ${{ inputs.run-lint }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - name: staticcheck
+        run: |
+          TAGS="${{ inputs.build-tags }}"
+          go run honnef.co/go/tools/cmd/staticcheck@latest ${TAGS:+-tags "$TAGS"} ./...

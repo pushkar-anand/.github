@@ -1,0 +1,61 @@
+name: Go Coverage
+
+on:
+  workflow_call:
+    inputs:
+      build-tags:
+        description: "Space-separated Go build tags (e.g. goolm)"
+        type: string
+        default: ""
+      go-version-file:
+        description: "Path to go.mod for Go version"
+        type: string
+        default: "go.mod"
+
+jobs:
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - name: Restore main coverage
+        if: github.event_name == 'pull_request'
+        id: restore-main
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: main-coverage.out
+          key: go-coverage-main-${{ github.sha }}
+          restore-keys: go-coverage-main-
+
+      - name: Test with coverage
+        run: |
+          TAGS="${{ inputs.build-tags }}"
+          go test ${TAGS:+-tags "$TAGS"} -race -count=1 -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Save main coverage
+        if: github.ref == 'refs/heads/main'
+        run: cp coverage.out main-coverage.out
+
+      - name: Cache main coverage
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: main-coverage.out
+          key: go-coverage-main-${{ github.sha }}
+
+      - name: Post coverage comment
+        if: github.event_name == 'pull_request'
+        uses: pushkar-anand/.github/.github/actions/go-coverage-comment@main
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
