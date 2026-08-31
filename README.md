@@ -11,6 +11,7 @@ actions are pinned to full commit SHAs with the version in a trailing comment.
 | Path | Type | Purpose |
 |------|------|---------|
 | `.github/workflows/go-ci.yml` | Reusable workflow | Build, vet, gofmt check, `go mod tidy` check, tests, optional staticcheck lint |
+| `.github/workflows/go-golangci-lint.yml` | Reusable workflow | golangci-lint against the calling repository's own `.golangci.yml` |
 | `.github/workflows/go-coverage.yml` | Reusable workflow | Test coverage with a per-package diff comment against `main` |
 | `.github/workflows/go-autoformat.yml` | Reusable workflow | Runs `make fmt` and pushes the result back to the PR branch |
 | `.github/workflows/go-release.yml` | Reusable workflow | GoReleaser binaries + multi-arch Docker images on GHCR |
@@ -52,6 +53,46 @@ jobs:
   generate + drift check, build, vet, `gofmt -l`, `go test -race -count=1`.
 - **Lint (staticcheck)** — only when `run-lint: true`. Needs
   `pull-requests: write`, which the reusable workflow requests itself.
+
+---
+
+## `go-golangci-lint.yml`
+
+Runs golangci-lint using the configuration the calling repository already has
+(`.golangci.yml` at its root), reporting findings as GitHub annotations on the
+diff. It reads no config of its own, so the set of enabled linters stays a
+property of the repository rather than of this workflow.
+
+```yaml
+name: Lint
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  golangci-lint:
+    uses: pushkar-anand/.github/.github/workflows/go-golangci-lint.yml@main
+    with:
+      version: v2.13.2
+```
+
+### Inputs
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `go-version-file` | string | `go.mod` | Path to the `go.mod` that pins the Go version |
+| `version` | string | `v2.13.2` | golangci-lint version to install; `latest` tracks the newest release |
+| `build-tags` | string | `""` | Space-separated Go build tags, passed as `--build-tags` |
+| `working-directory` | string | `.` | Directory to run golangci-lint in |
+| `args` | string | `""` | Extra flags appended to `golangci-lint run` |
+
+Pin `version` to the same version the repository's `make lint` installs, so a
+local run and CI report the same findings. This overlaps `go-ci.yml`'s
+`run-lint` job, which is staticcheck only — enable one or the other, not both.
 
 ---
 

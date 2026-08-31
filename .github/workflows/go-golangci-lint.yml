@@ -1,0 +1,50 @@
+name: Go golangci-lint
+
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        description: "Path to go.mod for Go version"
+        type: string
+        default: "go.mod"
+      version:
+        description: "golangci-lint version to install (e.g. v2.13.2, or 'latest')"
+        type: string
+        default: "v2.13.2"
+      build-tags:
+        description: "Space-separated Go build tags (e.g. goolm)"
+        type: string
+        default: ""
+      working-directory:
+        description: "Directory to run golangci-lint in"
+        type: string
+        default: "."
+      args:
+        description: "Extra flags appended to `golangci-lint run`"
+        type: string
+        default: ""
+
+jobs:
+  golangci-lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      # The action keeps its own analysis cache, so setup-go's module cache is
+      # all that is wanted from it here.
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: ${{ inputs.version }}
+          working-directory: ${{ inputs.working-directory }}
+          args: >-
+            ${{ inputs.build-tags && format('--build-tags "{0}"', inputs.build-tags) || '' }}
+            ${{ inputs.args }}
