@@ -147,16 +147,24 @@ jobs:
 
 ## `go-release.yml`
 
-On a published release: builds binaries with GoReleaser, then builds and pushes
-`linux/amd64` and `linux/arm64` images to GHCR and joins them under a single
-multi-arch manifest tagged with the release tag and `latest`. The arm64 image is
-built natively on `ubuntu-24.04-arm`.
+On a pushed tag: builds and pushes `linux/amd64` and `linux/arm64` images to
+GHCR, each natively (arm64 on `ubuntu-24.04-arm`), and joins them under one
+multi-arch manifest tagged with the tag and `latest`. Then GoReleaser builds the
+binaries and creates the GitHub release. GoReleaser runs last, so the release is
+published only once every image for the tag is on GHCR.
+
+Trigger it from a tag push, not the `release` event — this workflow is what
+creates the release.
 
 ```yaml
 name: Release
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   release:
@@ -172,7 +180,12 @@ jobs:
 | `image-name` | string | **required** | Image name; the owner is taken from `github.repository_owner`, producing `ghcr.io/<owner>/<image-name>` |
 | `go-version-file` | string | `go.mod` | Path to the `go.mod` that pins the Go version |
 
-Requires a `.goreleaser.yml` and a `Dockerfile` at the repository root.
+Requires a `.goreleaser.yaml` (or `.yml`) and a `Dockerfile` at the repository
+root. The workflow passes `VERSION`, `COMMIT` and `DATE` build args to the
+`Dockerfile` — `.git` is not in the image build context, so this is how the
+image learns its own version. Compatible with the repository's *immutable
+releases* setting: GoReleaser uploads to a draft release and publishes it once
+every asset is attached.
 
 ---
 
