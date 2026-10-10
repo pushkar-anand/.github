@@ -115,6 +115,7 @@ jobs:
 |------|------|---------|-------------|
 | `build-tags` | string | `""` | Space-separated Go build tags |
 | `go-version-file` | string | `go.mod` | Path to the `go.mod` that pins the Go version |
+| `comment` | boolean | `true` | Post the coverage table as a PR comment. With `false`, the total is only written to the job summary |
 
 The baseline comes from an Actions cache written on pushes to `main`, so the
 first PR after adoption shows totals without a delta.
