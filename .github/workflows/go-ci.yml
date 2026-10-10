@@ -57,29 +57,32 @@ jobs:
             exit 1
           fi
 
-      - name: Build
-        run: |
-          TAGS="${{ inputs.build-tags }}"
-          go build ${TAGS:+-tags "$TAGS"} ./...
+      # Independent checks run side by side; the Go build cache is safe to share
+      # between concurrent go commands. Any failure fails the job.
+      - parallel:
+          - name: Build
+            run: |
+              TAGS="${{ inputs.build-tags }}"
+              go build ${TAGS:+-tags "$TAGS"} ./...
 
-      - name: Vet
-        run: |
-          TAGS="${{ inputs.build-tags }}"
-          go vet ${TAGS:+-tags "$TAGS"} ./...
+          - name: Vet
+            run: |
+              TAGS="${{ inputs.build-tags }}"
+              go vet ${TAGS:+-tags "$TAGS"} ./...
 
-      - name: Format check
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "Unformatted files:"
-            echo "$unformatted"
-            exit 1
-          fi
+          - name: Format check
+            run: |
+              unformatted=$(gofmt -l .)
+              if [ -n "$unformatted" ]; then
+                echo "Unformatted files:"
+                echo "$unformatted"
+                exit 1
+              fi
 
-      - name: Test
-        run: |
-          TAGS="${{ inputs.build-tags }}"
-          go test ${TAGS:+-tags "$TAGS"} -race -count=1 ./...
+          - name: Test
+            run: |
+              TAGS="${{ inputs.build-tags }}"
+              go test ${TAGS:+-tags "$TAGS"} -race -count=1 ./...
 
   lint:
     name: Lint (staticcheck)

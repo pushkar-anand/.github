@@ -50,9 +50,21 @@ jobs:
 ### Jobs
 
 - **Build, Vet & Test** — `go mod verify`, `go mod tidy` diff check, optional
-  generate + drift check, build, vet, `gofmt -l`, `go test -race -count=1`.
-- **Lint (staticcheck)** — only when `run-lint: true`. Needs
-  `pull-requests: write`, which the reusable workflow requests itself.
+  generate + drift check, then build, vet, `gofmt -l` and
+  `go test -race -count=1` in parallel.
+- **Lint (staticcheck)** — only when `run-lint: true`. It declares
+  `pull-requests: write`, and a called workflow cannot ask for more than its
+  caller grants, so the calling job must grant it even when `run-lint` is
+  `false`:
+
+  ```yaml
+  jobs:
+    ci:
+      uses: pushkar-anand/.github/.github/workflows/go-ci.yml@main
+      permissions:
+        contents: read
+        pull-requests: write
+  ```
 
 ---
 
