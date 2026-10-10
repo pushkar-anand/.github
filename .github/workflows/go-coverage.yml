@@ -11,6 +11,10 @@ on:
         description: "Path to go.mod for Go version"
         type: string
         default: "go.mod"
+      comment:
+        description: "Post the coverage table as a PR comment"
+        type: boolean
+        default: true
 
 jobs:
   coverage:
@@ -53,8 +57,16 @@ jobs:
           path: main-coverage.out
           key: go-coverage-main-${{ github.sha }}
 
+      - name: Coverage summary
+        run: |
+          {
+            echo '```'
+            go tool cover -func=coverage.out | tail -n 1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Post coverage comment
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && inputs.comment
         uses: pushkar-anand/.github/.github/actions/go-coverage-comment@main
         with:
           pr-number: ${{ github.event.pull_request.number }}
