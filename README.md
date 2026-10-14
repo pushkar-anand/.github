@@ -192,6 +192,7 @@ jobs:
 |------|------|---------|-------------|
 | `image-name` | string | **required** | Image name; the owner is taken from `github.repository_owner`, producing `ghcr.io/<owner>/<image-name>` |
 | `go-version-file` | string | `go.mod` | Path to the `go.mod` that pins the Go version |
+| `release-notes-config` | string | `""` | Path to a [git-cliff](https://git-cliff.org) config. When set, its template writes the release body for the tag and GoReleaser's `changelog` settings are not used |
 
 Requires a `.goreleaser.yaml` (or `.yml`) and a `Dockerfile` at the repository
 root. The workflow passes `VERSION`, `COMMIT` and `DATE` build args to the
