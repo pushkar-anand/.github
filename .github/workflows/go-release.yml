@@ -11,6 +11,10 @@ on:
         description: "Path to go.mod for Go version"
         type: string
         default: "go.mod"
+      release-notes-config:
+        description: "Path to a git-cliff config whose template writes the release body. Empty keeps GoReleaser's own changelog."
+        type: string
+        default: ""
 
 jobs:
   docker-amd64:
@@ -134,10 +138,22 @@ jobs:
 
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
 
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        if: inputs.release-notes-config != ''
+
+      - name: Write the release notes
+        id: notes
+        if: inputs.release-notes-config != ''
+        env:
+          CONFIG: ${{ inputs.release-notes-config }}
+        run: |
+          notes="$RUNNER_TEMP/release-notes.md"
+          uvx git-cliff@2.14.2 --config "$CONFIG" --latest --strip all --output "$notes"
+          echo "args=--release-notes=$notes" >> "$GITHUB_OUTPUT"
 
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           version: ~> v2
-          args: release --clean
+          args: release --clean ${{ steps.notes.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
